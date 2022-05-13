@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# TODO instead of checking each feature individually, better check once after add_features. -> put one _check attribute to features and add things to check to the classes (call with super())
-
 ####################
 # Task.
 ####################
@@ -37,6 +35,10 @@ class Task:
             if hasattr(feat_obj, '_base_tsk') and feat_obj._base_tsk is None:
                 feat_obj._base_tsk = self
 
+        if __debug__:
+            for feat in [getattr(self, f) for f in self.features if getattr(self, f) is not None]:
+                feat._check()
+
     def print(self):
         """Quick print of all features for debugging."""
         print(self)
@@ -58,6 +60,11 @@ class TaskFeature:
     def __str__(self):
         """Convert TaskFeature object to string."""
         return self.__repr__() + ':\t' + ', '.join([f'{prop}={getattr(self, prop)}' for prop in self._properties])
+
+    def _check(self):
+        """Check function for features."""
+        # breakpoint()
+        pass
 
 
 # Task Features: Release Pattern
@@ -82,35 +89,20 @@ class Sporadic(ReleasePattern):
         self.maxiat = maxiat
         self.miniat = miniat
 
-    # maxiat getter and setter
-    @property
-    def maxiat(self):
-        return self._maxiat
+    def _check(self):  # add check functions
+        super()._check()
 
-    @maxiat.setter
-    def maxiat(self, value):
-        # Checks
-        if value is not None:
-            if value < 0:
-                raise ValueError(f'Non-negative value expected. Received {value=}.')
-            if hasattr(self, '_miniat') and self.miniat is not None and value < self._miniat:
-                raise ValueError(f'miniat <= value expected. Received {self._miniat=} > {value=}.')
-        self._maxiat = value
+        # check if self.maxiat >= 0
+        if self.maxiat is not None and self.maxiat < 0:
+            raise ValueError(f'Non-negative value expected for maxiat. Received {self.maxiat=}.')
 
-    # miniat getter and setter
-    @property
-    def miniat(self):
-        return self._miniat
+        # check if self.miniat >= 0
+        if self.miniat is not None and self.miniat < 0:
+            raise ValueError(f'Non-negative value expected for miniat. Received {self.miniat=}.')
 
-    @miniat.setter
-    def miniat(self, value):
-        # Checks
-        if value is not None:
-            if value < 0:
-                raise ValueError(f'Non-negative value expected. Received {value=}.')
-            if hasattr(self, '_maxiat') and self._maxiat is not None and value > self._maxiat:
-                raise ValueError(f'value <= maxiat expected. Received {value=} > {self._maxiat=}.')
-        self._miniat = value
+        # Check if self.maxiat >= self.miniat
+        if self.miniat is not None and self.maxiat is not None and self.maxiat < self.miniat:
+            raise ValueError(f'miniat <= maxiat expected. Received {self.miniat=} > {self.maxiat=}.')
 
 
 class Periodic(Sporadic):
@@ -130,16 +122,12 @@ class Periodic(Sporadic):
         self.period = period
         self.phase = phase
 
-    # period getter and setter
-    @property
-    def period(self):
-        return self._period
+    def _check(self):  # add check functions
+        super()._check()
 
-    @period.setter
-    def period(self, value):
-        if value is not None and value < 0:
-            raise ValueError(f'Non-negative value expected. Received {value=}.')
-        self._period = value
+        # check if self.period >= 0
+        if self.period is not None and self.period < 0:
+            raise ValueError(f'Non-negative value expected for period. Received {self.period=}.')
 
 
 # Task Features: Deadline
@@ -176,20 +164,13 @@ class ConstrainedDeadline(ArbitraryDeadline):
         # super
         super().__init__(dl=dl)  # set deadline
 
-    # dl getter and setter
-    @property
-    def dl(self):
-        return self._dl
+    def _check(self):  # add check functions
+        super()._check()
 
-    @dl.setter
-    def dl(self, value):
-        # Checks (only if _base_tsk is already given)
-        if (hasattr(self, '_base_tsk') and self._base_tsk is not None and value is not None
-                and hasattr(self._base_tsk, 'rel')
-                and hasattr(self._base_tsk.rel, 'miniat')):
-            if self._base_tsk.rel.miniat < value:
-                raise ValueError(f'Expected value <= miniat. Received {value=} > {self._base_tsk.rel.miniat=}.')
-        self._dl = value
+        # check if self.dl <= self._base_tsk.rel.miniat
+        if self.dl is not None and self._base_tsk is not None and self._base_tsk.rel is not None \
+                and self._base_tsk.rel.miniat is not None and self.dl > self._base_tsk.rel.miniat:
+            raise ValueError(f'Expected dl <= miniat. Received {self.dl=} > {self._base_tsk.rel.miniat=}.')
 
 
 class ImplicitDeadline(ConstrainedDeadline):
@@ -245,35 +226,20 @@ class BCWCExecution(Execution):
         self.bcet = bcet
         self.wcet = wcet
 
-    # bcet getter and setter
-    @property
-    def bcet(self):
-        return self._bcet
+    def _check(self):  # add check functions
+        super()._check()
 
-    @bcet.setter
-    def bcet(self, value):
-        if value is not None:
-            if value < 0:
-                raise ValueError(f'Non-negative value expected. Received {value=}.')
-            if hasattr(self, 'wcet') and self.wcet is not None:
-                if self.wcet < value:
-                    raise ValueError(f'wcet>=value expected. Received: {self.wcet=}<{value=}.')
-        self._bcet = value
+        # check if self.bcet >= 0
+        if self.bcet is not None and self.bcet < 0:
+            raise ValueError(f'Expected bcet >= 0. Received {self.bcet=} < 0.')
 
-    # wcet getter and setter
-    @property
-    def wcet(self):
-        return self._wcet
+        # check if self.wcet >= 0
+        if self.wcet is not None and self.wcet < 0:
+            raise ValueError(f'Expected wcet >= 0. Received {self.wcet} < 0.')
 
-    @wcet.setter
-    def wcet(self, value):
-        if value is not None:
-            if value < 0:
-                raise ValueError(f'Non-negative value expected. Received {value=}.')
-            if hasattr(self, 'bcet') and self.bcet is not None:
-                if self.bcet > value:
-                    raise ValueError(f'bcet<=value expected. Received: {self.bcet=}>{value=}.')
-        self._wcet = value
+        # check if self.bcet <= self.wcet
+        if self.bcet is not None and self.wcet is not None and self.bcet > self.wcet:
+            raise ValueError(f'Expected bcet <= wcet. Received {self.bcet=} > {self.wcet=}.')
 
 
 # Task Features: Communication Policy
@@ -294,18 +260,12 @@ class Communication(TaskFeature):
 
         self.type = communication_policy  # set communication type
 
-    # type getter and setter
-    @property
-    def type(self):
-        return self._type
+    def _check(self):  # add check functions
+        super()._check()
 
-    @type.setter
-    def type(self, value):
-        if value is not None:
-            if value not in self._comm_possibilities:
-                raise ValueError(f'{value} is not a valid communication policy to choose from. '
-                                 + f'Please choose a policy from the list {self._comm_possibilities}.')
-        self._type = value
+        # check if self.type in self._comm_possibilities
+        if self.type is not None and self.type not in self._comm_possibilities:
+            raise ValueError(f'Expected type in {self._comm_possibilities=}. Received {self.type=}.')
 
 
 if __name__ == '__main__':
