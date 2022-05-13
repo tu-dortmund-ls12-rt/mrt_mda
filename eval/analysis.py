@@ -130,7 +130,7 @@ class AugmJobChain():
         return '[ ' + ' / '.join(entries) + ' ]'
 
     def ell(self):
-        """Length of the chain, more precisely l() function from the paper. """
+        """Length of the chain, more precisely l() function from the paper."""
         return self.actuation - self.ext_act
 
     def valid(self):
@@ -209,8 +209,63 @@ def other_mda(chain):
 #####
 # Our analysis
 #####
+class PartitionedJobChain():
+    """A partitioned job chain."""
+
+    def __init__(self, part, chain, number):
+        """Create a partitioned job chain.
+            - part = where is the partioning
+            - chain = cause-effect chain
+            - number = which chain"""
+        assert 0 <= part < len(chain), "part is out of possible interval"
+        self.bw = BwJobChain(chain[:part + 1], number)
+        self.fw = FwJobChain(chain[part:], number + 1)  # forward job chain part
+        self.complete = self.bw.complete  # complete iff bw chain complete
+        self.base_ce_chain = chain
+
+    def __str__(self):
+        entries = [self.bw.__str__(no_braces=True), self.fw.__str__(no_braces=True)]
+        return '[ ' + ' / '.join(entries) + ' ]'
+
+    def ell(self):
+        """Length of the partitioned job chain, more precisely l() function from the paper."""
+        return let_we(self.fw[-1]) - let_re(self.bw[0])
+
+    def valid(self):
+        """Returns true if the partitioned job chain is valid."""
+        ce_chain = self.base_ce_chain
+        # maximal first read-event
+        max_first_re = max(let_re(Job(tsk, 0)) for tsk in ce_chain)
+
+        # number first job
+        number_first_job = self.bw[0].number
+
+        # check valid condition
+        return let_re(Job(ce_chain[0], number_first_job + 1)) > max_first_re
+
+
 def our_mda(chain):
-    pass
+    # construct first complete backward chain
+    fw0 = FwJobChain(chain, 0)  # first forward chain
+    bw_first = BwJobChain(chain, fw0[-1].number)
+
+    # find analysis interval
+    analysis_end = 2 * chain.hyperperiod() + chain.max_phase()
+
+    # choose point for partitioning
+    number_jobs_to_consider = [(analysis_end - tsk.rel.phase) / tsk.rel.period for tsk in chain]
+    part = number_jobs_to_consider.index(min(number_jobs_to_consider))  # choose part such that number of jobs minimized
+
+    # construct partitioned chains
+    part_chains = []
+    for number in itertools.count(start=0):
+        pc = PartitionedJobChain(part, chain, number)
+        if let_re(pc.bw[0]) <= analysis_end:
+            part_chains.append(pc)
+        else:
+            break
+
+    return max([pc.ell() for pc in part_chains if pc.complete and pc.valid()])
 
 
 def compute_mrt(mda):
@@ -246,6 +301,10 @@ if __name__ == '__main__':
         facs = [FwAugmJobChain(ce, nmb) for nmb in range(10)]
         bacs = [BwAugmJobChain(ce, nmb) for nmb in range(10)]
 
+        pc0 = [PartitionedJobChain(0, ce, nmb) for nmb in range(10)]
+        pc1 = [PartitionedJobChain(1, ce, nmb) for nmb in range(10)]
+        pcL = [PartitionedJobChain(len(ce) - 1, ce, nmb) for nmb in range(10)]
+
         print('\nForward job chains:')
         for fc in fcs:
             print(fc)
@@ -262,12 +321,26 @@ if __name__ == '__main__':
         for bac in bacs:
             print(bac, bac.complete, bac.valid())
 
+        print('\n0 partitioned job chains:')
+        for pc in pc0:
+            print(pc, pc.complete, pc.valid())
+
+        print('\n1 partitioned job chains:')
+        for pc in pc1:
+            print(pc, pc.complete, pc.valid())
+
+        print('\nL partitioned job chains:')
+        for pc in pcL:
+            print(pc, pc.complete, pc.valid())
+
         print('\nCE Chain:')
         ce.print_tasks()
 
     if debug_switch in [0, 2]:
         print('MRT other:', other_mrt(ce))
         print('MDA other:', other_mda(ce))
+
+        print('MDA our:', our_mda(ce))
 
         print('\nCE Chain:')
         ce.print_tasks()
