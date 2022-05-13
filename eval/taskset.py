@@ -89,7 +89,8 @@ class TaskSet:
 
     def hyperperiod(self):
         """Task set hyperperiod."""
-        return math.lcm(*[tsk.rel.period for tsk in self._lst])
+        assert all([tsk.rel.period.is_integer() for tsk in self._lst]), "Not all periods are integers."
+        return math.lcm(*[int(tsk.rel.period) for tsk in self._lst])
 
     def max_phase(self):
         """Maximal phase of the task set."""
