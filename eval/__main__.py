@@ -93,10 +93,10 @@ if code_switch in [0, 1]:
     """TODO """  # TODO
     utils = [0.5, 0.6, 0.7, 0.8, 0.9]  # utilization for the experiments
     tries_before_abortion = 100  # tries before aborted
-    number_systems_per_util = 10  # number of taskset and cause-effect chain pairs for each utilization
+    number_systems_per_util = 1000  # number of taskset and cause-effect chain pairs for each utilization
 
 
-    def make_system(util, tries=None):
+    def make_system(util, tries=None, debug_geq=0):
         """Create a task sets and cause-effect chain."""
         ce = None
         for id in itertools.count():
@@ -108,7 +108,7 @@ if code_switch in [0, 1]:
             if ce is not None:  # break when successful
                 break
 
-        if id > 0:
+        if __debug__ and id >= debug_geq:
             print(f"Cause-effect chain for {util=} successfully created after {id} failed attempts.")
 
         # set phases = 0
@@ -120,7 +120,8 @@ if code_switch in [0, 1]:
 
     ces = []
     for ut in utils:
-        ces.extend([make_system(ut, tries_before_abortion) for _ in range(number_systems_per_util)])
+        ces.extend([make_system(ut, tries=tries_before_abortion, debug_geq=5) for _ in range(number_systems_per_util)])
+        print(f"Cause-effect chains for utilization={ut} created.")
 
     # Store
     helpers.check_or_make_directory(path_out)

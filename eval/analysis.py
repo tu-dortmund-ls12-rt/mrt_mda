@@ -335,35 +335,41 @@ def compute_mrda(chain: CEChain, mda: float = None) -> float:
 #####
 def our_all(ce):
     """Return list of MDA, MRDA, MRT, and MRRT results for our analysis, plus a timer value."""
-    start = timeit.default_timer()  # start
+
+    def analyses(ce):
+        res_our_mda = our_mda(ce)
+        res_our_mrt = our_mrt(ce, res_our_mda)
+        return {'mda': res_our_mda,
+                'mrda': compute_mrda(ce, res_our_mda),
+                'mrt': res_our_mrt,
+                'mrrt': compute_mrrt(ce, res_our_mrt)}
 
     # our analysis
-    res_our_mda = our_mda(ce)
-    res_our_mrt = our_mrt(ce, res_our_mda)
-    result = {'mda': res_our_mda,
-              'mrda': compute_mrda(ce, res_our_mda),
-              'mrt': res_our_mrt,
-              'mrrt': compute_mrrt(ce, res_our_mrt)}
+    result = analyses(ce)
 
-    end = timeit.default_timer()  # end
-    result['time'] = end - start
+    # timing
+    result['time'] = timeit.timeit(lambda: analyses(ce), number=5)
+
     return result
 
 
 def other_all(ce):
     """Return list of MDA, MRDA, MRT, and MRRT results for other analysis, plus a timer value."""
-    start = timeit.default_timer()  # start
+
+    def analyses(ce):
+        res_other_mda_mrda = other_mda(ce, add_mrda=True)
+        res_other_mrt_mrrt = other_mrt(ce, add_mrrt=True)
+        return {'mda': res_other_mda_mrda[0],
+                'mrda': res_other_mda_mrda[1],
+                'mrt': res_other_mrt_mrrt[0],
+                'mrrt': res_other_mrt_mrrt[1]}
 
     # other analysis
-    res_other_mda_mrda = other_mda(ce, add_mrda=True)
-    res_other_mrt_mrrt = other_mrt(ce, add_mrrt=True)
-    result = {'mda': res_other_mda_mrda[0],
-              'mrda': res_other_mda_mrda[1],
-              'mrt': res_other_mrt_mrrt[0],
-              'mrrt': res_other_mrt_mrrt[1]}
+    result = analyses(ce)
 
-    end = timeit.default_timer()  # end
-    result['time'] = end - start
+    # timing
+    result['time'] = timeit.timeit(lambda: analyses(ce), number=5)
+
     return result
 
 
