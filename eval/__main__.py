@@ -5,6 +5,7 @@ import sys
 import itertools
 import random
 import numpy as np
+import timeit
 from multiprocessing import Pool
 
 import benchmark_WATERS as bench
@@ -58,7 +59,7 @@ class AnaRes:
         ])
 
     def speedup(self):
-        return self.time_other / self.time_other
+        return self.time_other / self.time_our
 
     def num_act_pattern(self):
         return len(self.chain.involved_activation_patterns())
@@ -89,7 +90,7 @@ if code_switch in [0, 1]:
     """TODO """  # TODO
     utils = [0.5, 0.6, 0.7, 0.8, 0.9]  # utilization for the experiments
     tries_before_abortion = 100  # tries before aborted
-    number_systems_per_util = 100  # number of taskset and cause-effect chain pairs for each utilization
+    number_systems_per_util = 10  # number of taskset and cause-effect chain pairs for each utilization
 
 
     def make_system(util, tries=None):
@@ -121,5 +122,38 @@ if code_switch in [0, 1]:
     # Store
     helpers.check_or_make_directory(path_out)
     helpers.write_data(path_out + f"ces.pickle", ces)
+
+#####
+# Analysis
+#####
+
+if code_switch in [0, 2]:
+    """TODO """  # TODO
+
+    # Load data
+    ces = helpers.load_data(path_out + f"ces.pickle")
+
+    # do experiments
+    with Pool(processes) as p:
+        our_results = p.map(ana.our_all, ces)
+        other_results = p.map(ana.other_all, ces)
+
+    assert len(ces) == len(our_results) == len(other_results), "length of results and of ce chains does not coincide"
+
+    # match into analysis objects
+    ana_results = []
+    for ce, our, other in zip(ces, our_results, other_results):
+        ana_results.append(AnaRes(
+            ce,
+            mrt_our=our['mrt'], mrrt_our=our['mrrt'],
+            mda_our=our['mda'], mrda_our=our['mrda'],
+            mrt_other=other['mrt'], mrrt_other=other['mrrt'],
+            mda_other=other['mda'], mrda_other=other['mrda'],
+            time_our=our['time'], time_other=other['time']
+        ))
+
+    # Store
+    helpers.check_or_make_directory(path_out)
+    helpers.write_data(path_out + f"ana_results.pickle", ana_results)
 
 quit()

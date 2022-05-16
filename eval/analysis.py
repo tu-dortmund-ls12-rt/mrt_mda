@@ -5,6 +5,7 @@ Assumptions:
 import itertools
 import math
 from cechain import CEChain
+import timeit
 
 
 #####
@@ -329,9 +330,46 @@ def compute_mrda(chain: CEChain, mda: float = None) -> float:
     return mrda
 
 
+#####
+# For our analysis:
+#####
+def our_all(ce):
+    """Return list of MDA, MRDA, MRT, and MRRT results for our analysis, plus a timer value."""
+    start = timeit.default_timer()  # start
+
+    # our analysis
+    res_our_mda = our_mda(ce)
+    res_our_mrt = our_mrt(ce, res_our_mda)
+    result = {'mda': res_our_mda,
+              'mrda': compute_mrda(ce, res_our_mda),
+              'mrt': res_our_mrt,
+              'mrrt': compute_mrrt(ce, res_our_mrt)}
+
+    end = timeit.default_timer()  # end
+    result['time'] = end - start
+    return result
+
+
+def other_all(ce):
+    """Return list of MDA, MRDA, MRT, and MRRT results for other analysis, plus a timer value."""
+    start = timeit.default_timer()  # start
+
+    # other analysis
+    res_other_mda_mrda = other_mda(ce, add_mrda=True)
+    res_other_mrt_mrrt = other_mrt(ce, add_mrrt=True)
+    result = {'mda': res_other_mda_mrda[0],
+              'mrda': res_other_mda_mrda[1],
+              'mrt': res_other_mrt_mrrt[0],
+              'mrrt': res_other_mrt_mrrt[1]}
+
+    end = timeit.default_timer()  # end
+    result['time'] = end - start
+    return result
+
+
 if __name__ == '__main__':
     """Debug"""
-    debug_switch = 5
+    debug_switch = 6
 
     import benchmark_WATERS as bw
 
@@ -460,6 +498,10 @@ if __name__ == '__main__':
             print('other', timeother := timeit.timeit(lambda: other_all(ce), number=10))
             print('other2', timeother2 := time(other_all, ce))
             print('speedup:', timeother / timeour, timeother2 / timeour2)
-            # TODO in main: plot speedup with number of involved activation patterns on the x axis
+
+    if debug_switch in [0, 6]:
+        ce_tests = [make_ce_test()[0] for _ in range(10)]
+        for ce in ce_tests:
+            print(ce, our_all(ce), other_all(ce))
 
     breakpoint()
