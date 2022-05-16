@@ -4,6 +4,7 @@ Assumptions:
 - periodic"""
 import itertools
 import math
+from cechain import CEChain
 
 
 #####
@@ -55,6 +56,10 @@ class JobChain(list):
 
     def __str__(self, no_braces=False):
         return '[ ' + ' -> '.join([str(j) for j in self]) + ' ]'
+
+    def ell(self):
+        """length of a job chain"""
+        return let_we(self[-1]) - let_re(self[0])
 
 
 class FwJobChain(JobChain):
@@ -133,6 +138,10 @@ class AugmJobChain():
         """Length of the chain, more precisely l() function from the paper."""
         return self.actuation - self.ext_act
 
+    def ellstar(self):
+        """Reduced length of the chain, more precisely l^*() function from the paper."""
+        return self.job_chain.ell()
+
     def valid(self):
         """Returns True if augmented job chain is valid."""
         ce_chain = self.base_ce_chain
@@ -172,7 +181,7 @@ class BwAugmJobChain(AugmJobChain):
         self.complete = job_chain.complete
 
 
-def other_mrt(chain):
+def other_mrt(chain, add_mrrt=False):
     """Method to compute MRT by looking at all valid immediate forward augmented job chains."""
     # find analysis interval
     analysis_end = 2 * chain.hyperperiod() + chain.max_phase()
@@ -186,10 +195,14 @@ def other_mrt(chain):
         else:
             break
 
-    return max([fac.ell() for fac in fw_augm_jcs if fac.valid()])
+    if add_mrrt:  # return tuple of mrt and mrrt
+        return (max([fac.ell() for fac in fw_augm_jcs if fac.valid()]),  # mrt
+                max([fac.ellstar() for fac in fw_augm_jcs if fac.valid()]))  # mrrt
+    else:  # return only mrt
+        return max([fac.ell() for fac in fw_augm_jcs if fac.valid()])  # mrt
 
 
-def other_mda(chain):
+def other_mda(chain, add_mrda=False):
     """Method to compute MDA by looking at all valid, complete immediate backward augmented job chains."""
     # find analysis interval
     analysis_end = 2 * chain.hyperperiod() + chain.max_phase()
@@ -203,7 +216,11 @@ def other_mda(chain):
         else:
             break
 
-    return max([bac.ell() for bac in bw_augm_jcs if bac.complete and bac.valid()])
+    if add_mrda:  # return tuple of mda and mrda
+        return (max([bac.ell() for bac in bw_augm_jcs if bac.complete and bac.valid()]),  # mda
+                max([bac.ellstar() for bac in bw_augm_jcs if bac.complete and bac.valid()]))  # mrda
+    else:  # return only mrt
+        return max([bac.ell() for bac in bw_augm_jcs if bac.complete and bac.valid()])  # mda
 
 
 #####
@@ -244,7 +261,9 @@ class PartitionedJobChain():
         return let_re(Job(ce_chain[0], number_first_job + 1)) > max_first_re
 
 
-def our_mda(chain):
+def our_mda(chain: CEChain) -> float:
+    """Compute maximum data age as in our paper using result X # TODO add definition/equation
+    """
     # construct first complete backward chain
     fw0 = FwJobChain(chain, 0)  # first forward chain
     bw_first = BwJobChain(chain, fw0[-1].number)
@@ -268,32 +287,67 @@ def our_mda(chain):
     return max([pc.ell() for pc in part_chains if pc.complete and pc.valid()])
 
 
-def compute_mrt(mda):
-    pass
+def our_mrt(chain: CEChain, mda: float = None) -> float:
+    """Compute maximum reaction time using the result X # TODO add result
+    """
+    if mda is None:  # Comptue MDA if not given
+        mda = our_mda(chain)
+
+    # find first valid 1-partitioned chain
+    max_first_re = max(let_re(Job(tsk, 0)) for tsk in chain)
+    for number in itertools.count(start=0):
+        if let_re(Job(chain[0], number + 1)) > max_first_re:
+            break
+    first_valid = PartitionedJobChain(0, chain, number)
+
+    return max(mda, first_valid.ell())
 
 
-def compute_mrrt(mrt):
-    pass
+def compute_mrrt(chain: CEChain, mrt: float = None) -> float:
+    """Compute MRRT using the result from X # TODO add result
+    Assumption: LET communication
+    """
+    if mrt is None:  # Compute MRT if not given
+        mrt = our_mrt(chain)
+
+    # difference between MRT and MRRT under LET is one period of the first task
+    mrrt = mrt - chain[0].rel.period
+
+    return mrrt
 
 
-def compute_mrda(mda):
-    pass
+def compute_mrda(chain: CEChain, mda: float = None) -> float:
+    """Compute MRDA using the result from X # TODO add result
+        Assumption: LET communication
+        """
+    if mda is None:  # Compute MRT if not given
+        mda = our_mda(chain)
+
+    # difference between MRT and MRRT under LET is one period of the last task
+    mrda = mda - chain[-1].rel.period
+
+    return mrda
 
 
 if __name__ == '__main__':
     """Debug"""
-    debug_switch = 2
+    debug_switch = 5
 
     import benchmark_WATERS as bw
 
-    ce = None
-    while ce is None:
-        ts = bw.gen_taskset(0.7)
-        ce = bw.gen_ce_chain(ts)
-    for tsk in ts:
-        tsk.rel.phase = 0
+
+    def make_ce_test():
+        ce = None
+        while ce is None:
+            ts = bw.gen_taskset(0.7)
+            ce = bw.gen_ce_chain(ts)
+        for tsk in ts:
+            tsk.rel.phase = 0
+        return ce, ts
+
 
     if debug_switch in [0, 1]:
+        ce, ts = make_ce_test()
 
         fcs = [FwJobChain(ce, nmb) for nmb in range(10)]
         bcs = [BwJobChain(ce, nmb) for nmb in range(10)]
@@ -337,6 +391,7 @@ if __name__ == '__main__':
         ce.print_tasks()
 
     if debug_switch in [0, 2]:
+        ce, ts = make_ce_test()
         print('MRT other:', other_mrt(ce))
         print('MDA other:', other_mda(ce))
 
@@ -344,5 +399,67 @@ if __name__ == '__main__':
 
         print('\nCE Chain:')
         ce.print_tasks()
+
+    if debug_switch in [0, 3]:
+        ce_tests = [make_ce_test()[0] for _ in range(10)]
+
+        for id, ce in enumerate(ce_tests):
+            print('\n', id)
+            print('other:', other_mda(ce, add_mrda=True), other_mrt(ce, add_mrrt=True))
+            o_mda = our_mda(ce)
+            o_mrt = our_mrt(ce, o_mda)
+            print('our:', o_mda, compute_mrda(ce, o_mda), o_mrt, compute_mrrt(ce, o_mrt))
+
+    if debug_switch in [0, 4]:
+        range_number = 1000
+        for id in range(range_number):
+            # test sample
+            ce, _ = make_ce_test()
+
+            # other analysis
+            res_other = [*other_mda(ce, add_mrda=True), *other_mrt(ce, add_mrrt=True)]
+            # our analysis
+            res_our_mda = our_mda(ce)
+            res_our_mrt = our_mrt(ce, res_our_mda)
+            res_our = [res_our_mda, compute_mrda(ce, res_our_mda), res_our_mrt, compute_mrrt(ce, res_our_mrt)]
+            # compare values
+            if not all([x == y for x, y in zip(res_other, res_our)]):
+                print('not equal')
+                breakpoint()
+            if (id + 1) % (range_number / 10) == 0:
+                print(id + 1, "already checked")
+
+    if debug_switch in [0, 5]:  # Test timing behavior
+        import timeit
+
+
+        def our_all(ce):
+            # our analysis
+            res_our_mda = our_mda(ce)
+            res_our_mrt = our_mrt(ce, res_our_mda)
+            return [res_our_mda, compute_mrda(ce, res_our_mda), res_our_mrt, compute_mrrt(ce, res_our_mrt)]
+
+
+        def other_all(ce):
+            return [*other_mda(ce, add_mrda=True), *other_mrt(ce, add_mrrt=True)]
+
+
+        def time(fct, ce):
+            start = timeit.default_timer()
+            fct(ce)
+            end = timeit.default_timer()
+            return end - start
+
+
+        ce_tests = [make_ce_test()[0] for _ in range(10)]
+
+        for ce in ce_tests:
+            print(ce, ce.involved_activation_patterns())
+            print('our', timeour := timeit.timeit(lambda: our_all(ce), number=10))
+            print('our2', timeour2 := time(our_all, ce))
+            print('other', timeother := timeit.timeit(lambda: other_all(ce), number=10))
+            print('other2', timeother2 := time(other_all, ce))
+            print('speedup:', timeother / timeour, timeother2 / timeour2)
+            # TODO in main: plot speedup with number of involved activation patterns on the x axis
 
     breakpoint()
