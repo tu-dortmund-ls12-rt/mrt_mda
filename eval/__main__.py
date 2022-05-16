@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import statistics
+
 from optparse import OptionParser
 import sys
 
@@ -11,6 +13,7 @@ from multiprocessing import Pool
 import benchmark_WATERS as bench
 import analysis as ana
 import helpers
+import plot
 
 # set seed
 random.seed(314159)
@@ -155,5 +158,40 @@ if code_switch in [0, 2]:
     # Store
     helpers.check_or_make_directory(path_out)
     helpers.write_data(path_out + f"ana_results.pickle", ana_results)
+
+#####
+# Evaluation
+#####
+
+if code_switch in [0, 3]:
+    """TODO """  # TODO
+
+    # Load data
+    ana_results = helpers.load_data(path_out + f"ana_results.pickle")
+
+    # Check if all analyzed values coincide
+    if all([a.check_equal() for a in ana_results]):
+        print('All measured values are equal.')
+    else:
+        print('Some values do not coincide!')
+        breakpoint()
+
+    # draw speedup over activation patterns
+    different_activations = sorted(list(set(a.num_act_pattern() for a in ana_results)))
+    speedups = [[a.speedup() for a in ana_results if a.num_act_pattern() == act] for act in
+                different_activations]  # speedups ordered by activation
+
+    assert sum(len(sp) for sp in
+               speedups) == len(ana_results), "number of speedups and number of analysis results does not coincide"
+
+    plot.plot(speedups, path_out + 'speedup.pdf', xticks=different_activations)
+
+    # print min, max, median,
+    import statistics
+
+    for sp, act in zip(speedups, different_activations):
+        print(f'=== Number of involved activation patterns: {act}')
+        print(f'Speedups: \n- min={min(sp):.2f}\n- median={statistics.median(sp):.2f}' +
+              f'\n- mean={statistics.mean(sp):.2f}\n- max={max(sp):.2f}')
 
 quit()
