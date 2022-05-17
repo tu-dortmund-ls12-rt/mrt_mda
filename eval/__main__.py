@@ -64,6 +64,9 @@ class AnaRes:
     def speedup(self):
         return self.time_other / self.time_our
 
+    def time_ratio(self):
+        return self.time_our / self.time_other
+
     def num_act_pattern(self):
         return len(self.chain.involved_activation_patterns())
 
@@ -71,11 +74,20 @@ class AnaRes:
 ##
 # Handle Options
 ##
+number_systems_per_util = 1000  # number of taskset and cause-effect chain pairs for each utilization
+code_switch = 0
+processes = 1
+repeat_measurement = 10
 # options
 parser = OptionParser()
 parser.add_option("-s", "--switch", dest="code_switch", type='int', help="Switch to place SWITCH of the experiment.",
                   metavar="SWITCH")
 parser.add_option("-p", "--proc", "--processes", dest="processes", type='int', help="Number of simultaneous processes.")
+parser.add_option("-r", "--repeat", dest="repeat_measurement", type='int',
+                  help="Repeat the runtime measurement REPEAT times and take the smallest one.",
+                  metavar="REPEAT")
+parser.add_option("-n", "--number", dest="number_systems_per_util", type='int',
+                  help="Number of systems to be created per utilization.")
 
 (options, args) = parser.parse_args()
 
@@ -85,6 +97,12 @@ if options.code_switch is not None:
 if options.processes is not None:
     processes = options.processes
 
+if options.repeat_measurement is not None:
+    repeat_measurement = options.repeat_measurement
+
+if options.number_systems_per_util is not None:
+    number_systems_per_util = options.number_systems_per_util
+
 #####
 # Generate tasksets and chains
 #####
@@ -93,7 +111,6 @@ if code_switch in [0, 1]:
     """TODO """  # TODO
     utils = [0.5, 0.6, 0.7, 0.8, 0.9]  # utilization for the experiments
     tries_before_abortion = 100  # tries before aborted
-    number_systems_per_util = 1000  # number of taskset and cause-effect chain pairs for each utilization
 
 
     def make_system(util, tries=None, debug_geq=0):
@@ -139,8 +156,8 @@ if code_switch in [0, 2]:
 
     # do experiments
     with Pool(processes) as p:
-        our_results = p.map(ana.our_all, ces)
-        other_results = p.map(ana.other_all, ces)
+        our_results = p.starmap(ana.our_all, zip(ces, itertools.repeat(repeat_measurement)))
+        other_results = p.starmap(ana.other_all, zip(ces, itertools.repeat(repeat_measurement)))
 
     assert len(ces) == len(our_results) == len(other_results), "length of results and of ce chains does not coincide"
 
@@ -181,18 +198,24 @@ if code_switch in [0, 3]:
     different_activations = sorted(list(set(a.num_act_pattern() for a in ana_results)))
     speedups = [[a.speedup() for a in ana_results if a.num_act_pattern() == act] for act in
                 different_activations]  # speedups ordered by activation
+    time_ratios = [[a.time_ratio() for a in ana_results if a.num_act_pattern() == act] for act in
+                   different_activations]  # speedups ordered by activation
 
     assert sum(len(sp) for sp in
                speedups) == len(ana_results), "number of speedups and number of analysis results does not coincide"
 
     plot.plot(speedups, path_out + 'speedup.pdf', xticks=different_activations)
+    plot.plot(time_ratios, path_out + 'time_ratios.pdf', xticks=different_activations)
 
     # print min, max, median,
     import statistics
 
     for sp, act in zip(speedups, different_activations):
-        print(f'=== Number of involved activation patterns: {act}')
+        print(f'=== Number of involved activation patterns: {act}, Sample contains {len(sp)} values')
         print(f'Speedups: \n- min={min(sp):.2f}\n- median={statistics.median(sp):.2f}' +
-              f'\n- mean={statistics.mean(sp):.2f}\n- max={max(sp):.2f}')
+              f'\n- mean={statistics.mean(sp):.2f}\n- max={max(sp):.2f}'
+              f'\n- speedup < 1.p in {len([s for s in sp if s < 1])} cases')
+        # TODO print number of included speedups for that case ( I think that for pattern =3 there are way less and therefore the maximal is less
 
+    breakpoint()
 quit()

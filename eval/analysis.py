@@ -333,7 +333,7 @@ def compute_mrda(chain: CEChain, mda: float = None) -> float:
 #####
 # For our analysis:
 #####
-def our_all(ce):
+def our_all(ce, repeat=10):
     """Return list of MDA, MRDA, MRT, and MRRT results for our analysis, plus a timer value."""
 
     def analyses(ce):
@@ -348,12 +348,12 @@ def our_all(ce):
     result = analyses(ce)
 
     # timing
-    result['time'] = timeit.timeit(lambda: analyses(ce), number=5)
+    result['time'] = min(timeit.repeat(lambda: analyses(ce), repeat=repeat, number=1))
 
     return result
 
 
-def other_all(ce):
+def other_all(ce, repeat=10):
     """Return list of MDA, MRDA, MRT, and MRRT results for other analysis, plus a timer value."""
 
     def analyses(ce):
@@ -368,7 +368,7 @@ def other_all(ce):
     result = analyses(ce)
 
     # timing
-    result['time'] = timeit.timeit(lambda: analyses(ce), number=5)
+    result['time'] = min(timeit.repeat(lambda: analyses(ce), repeat=repeat, number=1))
 
     return result
 
