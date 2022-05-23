@@ -333,6 +333,8 @@ def compute_mrda(chain: CEChain, mda: float = None) -> float:
 #####
 # For our analysis:
 #####
+
+
 def our_all(ce, repeat=10):
     """Return list of MDA, MRDA, MRT, and MRRT results for our analysis, plus a timer value."""
 

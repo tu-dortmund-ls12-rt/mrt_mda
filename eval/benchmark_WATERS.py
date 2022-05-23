@@ -268,6 +268,23 @@ def gen_taskset(
     return this_taskset
 
 
+def gen_taskset_periods(number_tasks):
+    """Generate taskset with periods only according to the related share in WATERS benchmark.
+    Assumptions:
+        - implicit deadline"""
+    periods = [1, 2, 5, 10, 20, 50, 100, 200, 1000]
+    period_pdf = [0.03 / 0.85, 0.02 / 0.85, 0.02 / 0.85, 0.25 / 0.85, 0.25 / 0.85, 0.03 / 0.85, 0.2 / 0.85,
+                  0.01 / 0.85, 0.04 / 0.85]  # share of WATERS benchmark
+    dist = stats.rv_discrete(name='periods', values=(periods, period_pdf))
+    sys_runnable_periods = dist.rvs(size=number_tasks)  # list all periods
+
+    # Make taskset
+    this_taskset = TaskSet(
+        *[task_file.Task(task_file.Periodic(period=per), task_file.ImplicitDeadline()) for per in sys_runnable_periods])
+
+    return this_taskset
+
+
 ###
 # Cause-effect chain generation.
 ###
