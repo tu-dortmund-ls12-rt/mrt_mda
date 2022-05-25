@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Evaluation from the paper achieved with python3 eval -s0 -p200 -r1000 -n10000
 import statistics
 
 from optparse import OptionParser
