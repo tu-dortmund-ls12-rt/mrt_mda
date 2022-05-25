@@ -26,6 +26,10 @@ def let_re_geq(time, task):
     """Number of earliest job with read-event of (task) at or after (time)."""
     return math.ceil((time - task.rel.phase) / task.rel.period)  # TODO int()
 
+def let_re_gt(time, task):
+    """Number of earliest job with read-event of (task) after (time)."""
+    return math.floor((time - task.rel.phase) / task.rel.period) +1  # TODO int()
+
 
 def let_we_leq(time, task):
     """Number of latest job with write-event of (task) at or before (time)."""
@@ -265,20 +269,22 @@ class PartitionedJobChain():
 def our_mda(chain: CEChain) -> float:
     """Compute maximum data age as in our paper using result X # TODO add definition/equation
     """
-    # construct first complete backward chain
-    fw0 = FwJobChain(chain, 0)  # first forward chain
-    bw_first = BwJobChain(chain, fw0[-1].number)
+    # construct first complete backward chain bc_F
+    max_first_re = max(let_re(Job(tsk, 0)) for tsk in chain)  # maximal first read-event
+    v_chain = max(let_re_gt(max_first_re, chain[0])-1, 0)  # number to check valid v
+    fw0 = FwJobChain(chain, v_chain)  # compute fc_v
+    bw_first = BwJobChain(chain, fw0[-1].number)  # compute bc_F
 
     # find analysis interval
     analysis_end = 2 * chain.hyperperiod() + chain.max_phase()
 
     # choose point for partitioning
-    number_jobs_to_consider = [(analysis_end - tsk.rel.phase) / tsk.rel.period for tsk in chain]
+    number_jobs_to_consider = [(analysis_end - bw_first[chain._lst.index(tsk)].number * tsk.rel.period + tsk.rel.phase) / tsk.rel.period for tsk in chain]
     part = number_jobs_to_consider.index(min(number_jobs_to_consider))  # choose part such that number of jobs minimized
 
     # construct partitioned chains
     part_chains = []
-    for number in itertools.count(start=0):
+    for number in itertools.count(start=bw_first[part].number):
         pc = PartitionedJobChain(part, chain, number)
         if let_re(pc.bw[0]) <= analysis_end:
             part_chains.append(pc)
@@ -295,11 +301,9 @@ def our_mrt(chain: CEChain, mda: float = None) -> float:
         mda = our_mda(chain)
 
     # find first valid 1-partitioned chain
-    max_first_re = max(let_re(Job(tsk, 0)) for tsk in chain)
-    for number in itertools.count(start=0):
-        if let_re(Job(chain[0], number + 1)) > max_first_re:
-            break
-    first_valid = PartitionedJobChain(0, chain, number)
+    max_first_re = max(let_re(Job(tsk, 0)) for tsk in chain)  # maximal first read-event
+    v_chain = max(let_re_gt(max_first_re, chain[0]) - 1, 0)  # number to check valid v
+    first_valid = PartitionedJobChain(0, chain, v_chain)
 
     return max(mda, first_valid.ell())
 
@@ -377,7 +381,7 @@ def other_all(ce, repeat=10):
 
 if __name__ == '__main__':
     """Debug"""
-    debug_switch = 6
+    debug_switch = 0
 
     import benchmark_WATERS as bw
 
