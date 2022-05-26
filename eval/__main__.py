@@ -236,9 +236,6 @@ if code_switch in [0, 3]:
     # Load data
     ana_results = helpers.load_data(path_out + f"ana_results.pickle")
 
-    lst = [a for a in ana_results if a.speedup()<1]
-    breakpoint()
-
     # Check if all analyzed values coincide
     if all([a.check_equal() for a in ana_results]):
         print('All measured values are equal.')
