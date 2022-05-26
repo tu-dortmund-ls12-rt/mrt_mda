@@ -266,12 +266,19 @@ class PartitionedJobChain():
         return let_re(Job(ce_chain[0], number_first_job + 1)) > max_first_re
 
 
-def our_mda(chain: CEChain) -> float:
+def our_mda(chain: CEChain, v_chain=None) -> float:
     """Compute maximum data age as in our paper using result X # TODO add definition/equation
+    - optimized p for periodic synchrnous let tasks
     """
     # construct first complete backward chain bc_F
-    max_first_re = max(let_re(Job(tsk, 0)) for tsk in chain)  # maximal first read-event
-    v_chain = max(let_re_gt(max_first_re, chain[0])-1, 0)  # number to check valid v
+    if v_chain is None:
+        max_first_re = max(let_re(Job(tsk, 0)) for tsk in chain)  # maximal first read-event
+        first_after = let_re_gt(max_first_re, chain[0])
+        assert first_after >= 0
+        if first_after == 0:
+            v_chain = 0
+        else:
+            v_chain = first_after - 1  # number to check valid v
     fw0 = FwJobChain(chain, v_chain)  # compute fc_v
     bw_first = BwJobChain(chain, fw0[-1].number)  # compute bc_F
 
@@ -279,8 +286,9 @@ def our_mda(chain: CEChain) -> float:
     analysis_end = 2 * chain.hyperperiod() + chain.max_phase()
 
     # choose point for partitioning
-    number_jobs_to_consider = [(analysis_end - bw_first[chain._lst.index(tsk)].number * tsk.rel.period + tsk.rel.phase) / tsk.rel.period for tsk in chain]
-    part = number_jobs_to_consider.index(min(number_jobs_to_consider))  # choose part such that number of jobs minimized
+    # for synchronous let just choose the task with highest period
+    periods= [tsk.rel.period for tsk in chain]
+    part = periods.index(max(periods))
 
     # construct partitioned chains
     part_chains = []
@@ -291,18 +299,26 @@ def our_mda(chain: CEChain) -> float:
         else:
             break
 
-    return max([pc.ell() for pc in part_chains if pc.complete and pc.valid()])
+    assert all(pc.complete for pc in part_chains)
+    assert all(pc.valid() for pc in part_chains)
+    return max([pc.ell() for pc in part_chains])  # check is not necessary anymore now
 
 
-def our_mrt(chain: CEChain, mda: float = None) -> float:
+def our_mrt(chain: CEChain, mda: float = None, v_chain=None) -> float:
     """Compute maximum reaction time using the result X # TODO add result
     """
     if mda is None:  # Comptue MDA if not given
         mda = our_mda(chain)
 
     # find first valid 1-partitioned chain
-    max_first_re = max(let_re(Job(tsk, 0)) for tsk in chain)  # maximal first read-event
-    v_chain = max(let_re_gt(max_first_re, chain[0]) - 1, 0)  # number to check valid v
+    if v_chain is None:
+        max_first_re = max(let_re(Job(tsk, 0)) for tsk in chain)  # maximal first read-event
+        first_after = let_re_gt(max_first_re, chain[0])
+        assert first_after >= 0
+        if first_after == 0:
+            v_chain = 0
+        else:
+            v_chain = first_after - 1  # number to check valid v
     first_valid = PartitionedJobChain(0, chain, v_chain)
 
     return max(mda, first_valid.ell())
@@ -343,8 +359,17 @@ def our_all(ce, repeat=10):
     """Return list of MDA, MRDA, MRT, and MRRT results for our analysis, plus a timer value."""
 
     def analyses(ce):
-        res_our_mda = our_mda(ce)
-        res_our_mrt = our_mrt(ce, res_our_mda)
+        # compute v_chain once
+        max_first_re = max(let_re(Job(tsk, 0)) for tsk in ce)  # maximal first read-event
+        first_after = let_re_gt(max_first_re, ce[0])
+        assert first_after >= 0
+        if first_after == 0:
+            v_chain = 0
+        else:
+            v_chain = first_after - 1  # number to check valid v
+
+        res_our_mda = our_mda(ce, v_chain=v_chain)
+        res_our_mrt = our_mrt(ce, res_our_mda, v_chain=v_chain)
         return {'mda': res_our_mda,
                 'mrda': compute_mrda(ce, res_our_mda),
                 'mrt': res_our_mrt,

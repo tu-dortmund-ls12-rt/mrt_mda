@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Evaluation from the paper achieved with python3 eval -s0 -p200 -r1000 -n10000
+# Evaluation from the paper achieved with python3 -O eval -s0 -p200 -r1000 -n10000
 import statistics
 
 from optparse import OptionParser
@@ -147,6 +147,7 @@ if code_switch in [0, 1]:
            print_status(id)]
 
     # Store
+    print(helpers.time_now(), 'Store Results')
     helpers.check_or_make_directory(path_out)
     helpers.write_data(path_out + f"ces.pickle", ces)
 
@@ -193,6 +194,7 @@ if code_switch in [0, 2]:
     """TODO """  # TODO
 
     # Load data
+    print(helpers.time_now(), 'Load data')
     ces = helpers.load_data(path_out + f"ces.pickle")
 
     # do experiments
@@ -207,6 +209,7 @@ if code_switch in [0, 2]:
     assert len(ces) == len(our_results) == len(other_results), "length of results and of ce chains does not coincide"
 
     # match into analysis objects
+    print(helpers.time_now(), 'Match analysis objects')
     ana_results = []
     for ce, our, other in zip(ces, our_results, other_results):
         ana_results.append(AnaRes(
@@ -219,6 +222,7 @@ if code_switch in [0, 2]:
         ))
 
     # Store
+    print(helpers.time_now(), 'Store Results')
     helpers.check_or_make_directory(path_out)
     helpers.write_data(path_out + f"ana_results.pickle", ana_results)
 
@@ -231,6 +235,9 @@ if code_switch in [0, 3]:
 
     # Load data
     ana_results = helpers.load_data(path_out + f"ana_results.pickle")
+
+    lst = [a for a in ana_results if a.speedup()<1]
+    breakpoint()
 
     # Check if all analyzed values coincide
     if all([a.check_equal() for a in ana_results]):
