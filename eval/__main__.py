@@ -12,7 +12,9 @@ import timeit
 from multiprocessing import Pool
 
 import benchmark_WATERS as bench
-import analysis as ana
+
+# import analysis as ana
+import analysis_new as ana
 import helpers
 import plot
 
@@ -21,7 +23,7 @@ random.seed(314159)
 np.random.seed(314159)
 
 # output path
-path_out = 'output/'
+path_out = "output/"
 
 
 # Analysis class
@@ -31,10 +33,20 @@ path_out = 'output/'
 class AnaRes:
     """Result of the analysis."""
 
-    def __init__(self, chain,
-                 mrt_our=None, mrrt_our=None, mda_our=None, mrda_our=None,
-                 mrt_other=None, mrrt_other=None, mda_other=None, mrda_other=None,
-                 time_our=None, time_other=None):
+    def __init__(
+        self,
+        chain,
+        mrt_our=None,
+        mrrt_our=None,
+        mda_our=None,
+        mrda_our=None,
+        mrt_other=None,
+        mrrt_other=None,
+        mda_other=None,
+        mrda_other=None,
+        time_our=None,
+        time_other=None,
+    ):
         # chain
         self.chain = chain
 
@@ -55,12 +67,14 @@ class AnaRes:
         self.time_other = time_other
 
     def check_equal(self):
-        return all([
-            self.mrt_our == self.mrt_other,
-            self.mrrt_our == self.mrrt_other,
-            self.mda_our == self.mda_other,
-            self.mrda_our == self.mrda_other
-        ])
+        return all(
+            [
+                self.mrt_our == self.mrt_other,
+                self.mrrt_our == self.mrrt_other,
+                self.mda_our == self.mda_other,
+                self.mrda_our == self.mrda_other,
+            ]
+        )
 
     def speedup(self):
         return self.time_other / self.time_our
@@ -75,20 +89,45 @@ class AnaRes:
 ##
 # Handle Options
 ##
-number_systems_per_util = 10000  # number of taskset and cause-effect chain pairs for each utilization
+number_systems_per_util = (
+    10000  # number of taskset and cause-effect chain pairs for each utilization
+)
 code_switch = 0
 processes = 1
 repeat_measurement = 100
 # options
 parser = OptionParser()
-parser.add_option("-s", "--switch", dest="code_switch", type='int', help="Switch to place SWITCH of the experiment.",
-                  metavar="SWITCH")
-parser.add_option("-p", "--proc", "--processes", dest="processes", type='int', help="Number of simultaneous processes.")
-parser.add_option("-r", "--repeat", dest="repeat_measurement", type='int',
-                  help="Repeat the runtime measurement REPEAT times and take the smallest one.",
-                  metavar="REPEAT")
-parser.add_option("-n", "--number", dest="number_systems_per_util", type='int',
-                  help="Number of systems to be created per utilization.")
+parser.add_option(
+    "-s",
+    "--switch",
+    dest="code_switch",
+    type="int",
+    help="Switch to place SWITCH of the experiment.",
+    metavar="SWITCH",
+)
+parser.add_option(
+    "-p",
+    "--proc",
+    "--processes",
+    dest="processes",
+    type="int",
+    help="Number of simultaneous processes.",
+)
+parser.add_option(
+    "-r",
+    "--repeat",
+    dest="repeat_measurement",
+    type="int",
+    help="Repeat the runtime measurement REPEAT times and take the smallest one.",
+    metavar="REPEAT",
+)
+parser.add_option(
+    "-n",
+    "--number",
+    dest="number_systems_per_util",
+    type="int",
+    help="Number of systems to be created per utilization.",
+)
 
 (options, args) = parser.parse_args()
 
@@ -109,9 +148,8 @@ if options.number_systems_per_util is not None:
 #####
 
 if code_switch in [0, 1]:
-    """TODO """  # TODO
+    """TODO"""  # TODO
     tries_before_abortion = 100
-
 
     def make_system(tries=None, debug_geq=0):
         """Create a task sets and cause-effect chain."""
@@ -119,7 +157,9 @@ if code_switch in [0, 1]:
         ce = None
         for id in itertools.count():
             if tries is not None and id + 1 > tries:
-                raise RuntimeError(f"Cause-effect chain could not be created after {tries + 1} tries.")
+                raise RuntimeError(
+                    f"Cause-effect chain could not be created after {tries + 1} tries."
+                )
             ts = bench.gen_taskset_periods(random.randint(50, 100))
             ce = bench.gen_ce_chain(ts)
 
@@ -127,7 +167,9 @@ if code_switch in [0, 1]:
                 break
 
         if __debug__ and id >= debug_geq:
-            print(f"Cause-effect chain successfully created after {id} failed attempts.")
+            print(
+                f"Cause-effect chain successfully created after {id} failed attempts."
+            )
 
         # set phases = 0
         for tsk in ce.base_ts:
@@ -135,19 +177,20 @@ if code_switch in [0, 1]:
 
         return ce
 
-
     def print_status(id):
         number_systems_per_util / 10
         if (id + 1) % (number_systems_per_util / 20) == 0:
-            print(helpers.time_now(), f'== {id + 1} systems created')
+            print(helpers.time_now(), f"== {id + 1} systems created")
         return True
 
-
-    ces = [make_system(tries=tries_before_abortion, debug_geq=5) for id in range(number_systems_per_util) if
-           print_status(id)]
+    ces = [
+        make_system(tries=tries_before_abortion, debug_geq=5)
+        for id in range(number_systems_per_util)
+        if print_status(id)
+    ]
 
     # Store
-    print(helpers.time_now(), 'Store Results')
+    print(helpers.time_now(), "Store Results")
     helpers.check_or_make_directory(path_out)
     helpers.write_data(path_out + f"ces.pickle", ces)
 
@@ -191,38 +234,51 @@ if code_switch in [0, 1]:
 #####
 
 if code_switch in [0, 2]:
-    """TODO """  # TODO
+    """TODO"""  # TODO
 
     # Load data
-    print(helpers.time_now(), 'Load data')
+    print(helpers.time_now(), "Load data")
     ces = helpers.load_data(path_out + f"ces.pickle")
 
     # do experiments
-    print(helpers.time_now(), 'Start our analysis')
+    print(helpers.time_now(), "Start our analysis")
     with Pool(processes) as p:
-        our_results = p.starmap(ana.our_all, zip(ces, itertools.repeat(repeat_measurement)))
+        our_results = p.starmap(
+            ana.our_all, zip(ces, itertools.repeat(repeat_measurement))
+        )
 
-    print(helpers.time_now(), 'Start other analysis')
+    print(helpers.time_now(), "Start other analysis")
     with Pool(processes) as p:
-        other_results = p.starmap(ana.other_all, zip(ces, itertools.repeat(repeat_measurement)))
+        other_results = p.starmap(
+            ana.other_all, zip(ces, itertools.repeat(repeat_measurement))
+        )
 
-    assert len(ces) == len(our_results) == len(other_results), "length of results and of ce chains does not coincide"
+    assert (
+        len(ces) == len(our_results) == len(other_results)
+    ), "length of results and of ce chains does not coincide"
 
     # match into analysis objects
-    print(helpers.time_now(), 'Match analysis objects')
+    print(helpers.time_now(), "Match analysis objects")
     ana_results = []
     for ce, our, other in zip(ces, our_results, other_results):
-        ana_results.append(AnaRes(
-            ce,
-            mrt_our=our['mrt'], mrrt_our=our['mrrt'],
-            mda_our=our['mda'], mrda_our=our['mrda'],
-            mrt_other=other['mrt'], mrrt_other=other['mrrt'],
-            mda_other=other['mda'], mrda_other=other['mrda'],
-            time_our=our['time'], time_other=other['time']
-        ))
+        ana_results.append(
+            AnaRes(
+                ce,
+                mrt_our=our["mrt"],
+                mrrt_our=our["mrrt"],
+                mda_our=our["mda"],
+                mrda_our=our["mrda"],
+                mrt_other=other["mrt"],
+                mrrt_other=other["mrrt"],
+                mda_other=other["mda"],
+                mrda_other=other["mrda"],
+                time_our=our["time"],
+                time_other=other["time"],
+            )
+        )
 
     # Store
-    print(helpers.time_now(), 'Store Results')
+    print(helpers.time_now(), "Store Results")
     helpers.check_or_make_directory(path_out)
     helpers.write_data(path_out + f"ana_results.pickle", ana_results)
 
@@ -231,32 +287,47 @@ if code_switch in [0, 2]:
 #####
 
 if code_switch in [0, 3]:
-    """TODO """  # TODO
+    """TODO"""  # TODO
 
     # Load data
     ana_results = helpers.load_data(path_out + f"ana_results.pickle")
 
     # Check if all analyzed values coincide
     if all([a.check_equal() for a in ana_results]):
-        print('All measured values are equal.')
+        print("All measured values are equal.")
     else:
-        print('Some values do not coincide!')
+        print("Some values do not coincide!")
         breakpoint()
 
     # draw speedup over activation patterns
     different_activations = sorted(list(set(a.num_act_pattern() for a in ana_results)))
-    speedups = [[a.speedup() for a in ana_results if a.num_act_pattern() == act] for act in
-                different_activations]  # speedups ordered by activation
-    time_ratios = [[a.time_ratio() for a in ana_results if a.num_act_pattern() == act] for act in
-                   different_activations]  # speedups ordered by activation
+    speedups = [
+        [a.speedup() for a in ana_results if a.num_act_pattern() == act]
+        for act in different_activations
+    ]  # speedups ordered by activation
+    time_ratios = [
+        [a.time_ratio() for a in ana_results if a.num_act_pattern() == act]
+        for act in different_activations
+    ]  # speedups ordered by activation
 
-    assert sum(len(sp) for sp in
-               speedups) == len(ana_results), "number of speedups and number of analysis results does not coincide"
+    assert sum(len(sp) for sp in speedups) == len(
+        ana_results
+    ), "number of speedups and number of analysis results does not coincide"
 
-    plot.boxplot(speedups, path_out + 'speedup.pdf', xticks=different_activations,
-                 xaxis_label="involved activation patterns", yaxis_label="speedup")
-    plot.boxplot(time_ratios, path_out + 'time_ratios.pdf', xticks=different_activations,
-                 xaxis_label="involved activation patterns", yaxis_label="time_ratio")
+    plot.boxplot(
+        speedups,
+        path_out + "speedup.pdf",
+        xticks=different_activations,
+        xaxis_label="involved activation patterns",
+        yaxis_label="speedup",
+    )
+    plot.boxplot(
+        time_ratios,
+        path_out + "time_ratios.pdf",
+        xticks=different_activations,
+        xaxis_label="involved activation patterns",
+        yaxis_label="time_ratio",
+    )
 
     # # speedups but 2 tasks per chains extra
     # speedups2 = [[a.speedup() for a in ana_results if a.num_act_pattern() == act and len(a.chain) <= 2] for act in
@@ -268,21 +339,23 @@ if code_switch in [0, 3]:
     #     plot.histogram([sp2, sp3], path_out + f"histogram_{act}.pdf", yscale='log')
 
     for sp, act in zip(speedups, different_activations):
-        plot.histogram(sp, path_out + f"histogram_{act}.pdf", yscale='log')
+        plot.histogram(sp, path_out + f"histogram_{act}.pdf", yscale="log")
 
     # print min, max, median,
     import statistics
 
     report_string = []
     for sp, act in zip(speedups, different_activations):
-        report_string.append(f'=== Number of involved activation patterns: {act}, Sample contains {len(sp)} values' +
-                             f'\nSpeedups: \n- min={min(sp):.2f}\n- median={statistics.median(sp):.2f}' +
-                             f'\n- mean={statistics.mean(sp):.2f}\n- max={max(sp):.2f}'
-                             f'\n- speedup < 1.0 in {len([s for s in sp if s < 1])} cases')
-    report_string = '\n\n'.join(report_string)
+        report_string.append(
+            f"=== Number of involved activation patterns: {act}, Sample contains {len(sp)} values"
+            + f"\nSpeedups: \n- min={min(sp):.2f}\n- median={statistics.median(sp):.2f}"
+            + f"\n- mean={statistics.mean(sp):.2f}\n- max={max(sp):.2f}"
+            f"\n- speedup < 1.0 in {len([s for s in sp if s < 1])} cases"
+        )
+    report_string = "\n\n".join(report_string)
     print(report_string)
 
-    with open(path_out + 'results.txt', 'w') as f:
+    with open(path_out + "results.txt", "w") as f:
         f.write(report_string)
 
 quit()
