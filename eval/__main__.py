@@ -13,8 +13,7 @@ from multiprocessing import Pool
 
 import benchmark_WATERS as bench
 
-# import analysis as ana
-import analysis_new as ana
+import analysis as ana
 import helpers
 import plot
 
@@ -36,14 +35,8 @@ class AnaRes:
     def __init__(
         self,
         chain,
-        mrt_our=None,
-        mrrt_our=None,
-        mda_our=None,
-        mrda_our=None,
-        mrt_other=None,
-        mrrt_other=None,
-        mda_other=None,
-        mrda_other=None,
+        lat_our=None,
+        lat_other=None,
         time_our=None,
         time_other=None,
     ):
@@ -51,16 +44,10 @@ class AnaRes:
         self.chain = chain
 
         # our results
-        self.mrt_our = mrt_our
-        self.mrrt_our = mrrt_our
-        self.mda_our = mda_our
-        self.mrda_our = mrda_our
+        self.lat_our = lat_our
 
         # other results
-        self.mrt_other = mrt_other
-        self.mrrt_other = mrrt_other
-        self.mda_other = mda_other
-        self.mrda_other = mrda_other
+        self.lat_other = lat_other
 
         # timing
         self.time_our = time_our
@@ -69,10 +56,7 @@ class AnaRes:
     def check_equal(self):
         return all(
             [
-                self.mrt_our == self.mrt_other,
-                self.mrrt_our == self.mrrt_other,
-                self.mda_our == self.mda_other,
-                self.mrda_our == self.mrda_other,
+                self.lat_our == self.lat_other,
             ]
         )
 
@@ -194,47 +178,13 @@ if code_switch in [0, 1]:
     helpers.check_or_make_directory(path_out)
     helpers.write_data(path_out + f"ces.pickle", ces)
 
-# if code_switch in [0, 1]:
-#     """TODO """  # TODO
-#     utils = [0.5, 0.6, 0.7, 0.8, 0.9]  # utilization for the experiments
-#     tries_before_abortion = 100  # tries before aborted
-#
-#     def make_system(util, tries=None, debug_geq=0):
-#         """Create a task sets and cause-effect chain."""
-#         ce = None
-#         for id in itertools.count():
-#             if tries is not None and id + 1 > tries:
-#                 raise RuntimeError(f"Cause-effect chain could not be created for {util=} after {tries + 1} tries.")
-#             ts = bench.gen_taskset(util)
-#             ce = bench.gen_ce_chain(ts)
-#
-#             if ce is not None:  # break when successful
-#                 break
-#
-#         if __debug__ and id >= debug_geq:
-#             print(f"Cause-effect chain for {util=} successfully created after {id} failed attempts.")
-#
-#         # set phases = 0
-#         for tsk in ce.base_ts:
-#             tsk.rel.phase = 0
-#
-#         return ce
-#
-#     ces = []
-#     for ut in utils:
-#         ces.extend([make_system(ut, tries=tries_before_abortion, debug_geq=5) for _ in range(number_systems_per_util)])
-#         print(f"Cause-effect chains for utilization={ut} created.")
-#
-#     # Store
-#     helpers.check_or_make_directory(path_out)
-#     helpers.write_data(path_out + f"ces.pickle", ces)
 
 #####
 # Analysis
 #####
 
 if code_switch in [0, 2]:
-    """TODO"""  # TODO
+    """Run analysis for the experiments (E2E Latency only)."""
 
     # Load data
     print(helpers.time_now(), "Load data")
@@ -244,13 +194,13 @@ if code_switch in [0, 2]:
     print(helpers.time_now(), "Start our analysis")
     with Pool(processes) as p:
         our_results = p.starmap(
-            ana.our_all, zip(ces, itertools.repeat(repeat_measurement))
+            ana.our_all_lat_only, zip(ces, itertools.repeat(repeat_measurement))
         )
 
     print(helpers.time_now(), "Start other analysis")
     with Pool(processes) as p:
         other_results = p.starmap(
-            ana.other_all, zip(ces, itertools.repeat(repeat_measurement))
+            ana.other_all_lat_only, zip(ces, itertools.repeat(repeat_measurement))
         )
 
     assert (
@@ -264,14 +214,8 @@ if code_switch in [0, 2]:
         ana_results.append(
             AnaRes(
                 ce,
-                mrt_our=our["mrt"],
-                mrrt_our=our["mrrt"],
-                mda_our=our["mda"],
-                mrda_our=our["mrda"],
-                mrt_other=other["mrt"],
-                mrrt_other=other["mrrt"],
-                mda_other=other["mda"],
-                mrda_other=other["mrda"],
+                lat_our=our['lat'],
+                lat_other=other['lat'],
                 time_our=our["time"],
                 time_other=other["time"],
             )

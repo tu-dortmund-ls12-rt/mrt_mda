@@ -345,6 +345,23 @@ def compute_mrda(chain: CEChain, mda: float = None) -> float:
 # For our analysis:
 #####
 
+def our_all_lat_only(ce, repeat=10):
+    """Return E2E latency for our analysis, plus a timer value."""
+
+    def analyses(ce):
+        res_our_lat = our_e2e(ce)
+        return {
+            "lat": res_our_lat,
+        }
+
+    # our analysis
+    result = analyses(ce)
+
+    # timing
+    result["time"] = min(timeit.repeat(lambda: analyses(ce), repeat=repeat, number=1))
+
+    return result
+
 
 def our_all(ce, repeat=10):
     """Return list of MDA, MRDA, MRT, and MRRT results for our analysis, plus a timer value."""
@@ -360,6 +377,24 @@ def our_all(ce, repeat=10):
         }
 
     # our analysis
+    result = analyses(ce)
+
+    # timing
+    result["time"] = min(timeit.repeat(lambda: analyses(ce), repeat=repeat, number=1))
+
+    return result
+
+def other_all_lat_only(ce, repeat=10):
+    """Return list of MDA, MRDA, MRT, and MRRT results for other analysis, plus a timer value."""
+
+    def analyses(ce):
+        # res_other_mda_mrda = other_mda(ce, add_mrda=True)
+        res_other_lat = other_mrt(ce, add_mrrt=False)
+        return {
+            "lat": res_other_lat,
+        }
+
+    # other analysis
     result = analyses(ce)
 
     # timing
