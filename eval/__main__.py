@@ -231,7 +231,7 @@ if code_switch in [0, 2]:
 #####
 
 if code_switch in [0, 3]:
-    """TODO"""  # TODO
+    """Plotting."""
 
     # Load data
     ana_results = helpers.load_data(path_out + f"ana_results.pickle")
@@ -262,16 +262,21 @@ if code_switch in [0, 3]:
         speedups,
         path_out + "speedup.pdf",
         xticks=different_activations,
-        xaxis_label="involved activation patterns",
-        yaxis_label="speedup",
+        xaxis_label="Involved activation patterns",
+        yaxis_label="Speedup",
     )
     plot.boxplot(
         time_ratios,
         path_out + "time_ratios.pdf",
         xticks=different_activations,
-        xaxis_label="involved activation patterns",
-        yaxis_label="time_ratio",
+        xaxis_label="Involved activation patterns",
+        yaxis_label="Time ratio",
     )
+
+    # Draw points
+    actual_times_our = [a.time_our for a in ana_results]
+    actual_times_other = [a.time_other for a in ana_results]
+    plot.draw_points([actual_times_other,actual_times_our],path_out + "point_cloud.pdf", xaxis_label='Runtime (G21) [s]', yaxis_label='Runtime (Our) [s]')
 
     # # speedups but 2 tasks per chains extra
     # speedups2 = [[a.speedup() for a in ana_results if a.num_act_pattern() == act and len(a.chain) <= 2] for act in

@@ -68,3 +68,45 @@ def histogram(data, filename, title='', xaxis_label="", yaxis_label="", yscale='
     # plt.show()
     fig.savefig(filename)
     print(f'plot {filename} created')
+
+def draw_points(
+        results,
+        filename,
+        xaxis_label="",
+        yaxis_label="",
+        convert=False):
+    """Draw given results as points."""
+
+    # Convert list of results.
+    if convert:
+        results = list(zip(*results))
+
+    # Size parameters:
+    plt.rcParams.update({'font.size': 17})
+    plt.rcParams.update({'figure.subplot.top': 0.99})
+    plt.rcParams.update({'figure.subplot.bottom': 0.25})
+    plt.rcParams.update({'figure.subplot.left': 0.18})
+    plt.rcParams.update({'figure.subplot.right': 0.99})
+    plt.rcParams.update({'figure.figsize': [7, 4.8]})
+
+    # Draw plots:
+    fig1, ax1 = plt.subplots()
+
+    total_max = max(results[0] + results[1])
+    total_min = min(results[0] + results[1])
+    ax1.set_ylim([total_min,total_max])
+    ax1.set_xlim([total_min,total_max])
+    ax1.set_yscale('log')
+    ax1.set_xscale('log')
+
+    plt.plot(results[0], results[1], 'o')
+
+     # horizontal line
+    ax1.plot([0, 1], [0, 1], '--', transform=ax1.transAxes)
+
+    ax1.set_xlabel(xaxis_label, fontsize=22)
+    ax1.set_ylabel(yaxis_label, fontsize=22)
+    plt.tight_layout()
+
+    # Save.
+    plt.savefig(filename)
