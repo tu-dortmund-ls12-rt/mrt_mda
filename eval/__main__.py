@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Evaluation from the paper achieved with python3 -O eval -s0 -p200 -r1000 -n10000
+# Evaluation from the dissertation achieved with python3 -O eval -s0 -p200 -r10000 -n10000
 import statistics
 
 from optparse import OptionParser
